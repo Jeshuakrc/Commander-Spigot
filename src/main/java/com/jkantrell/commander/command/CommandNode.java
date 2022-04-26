@@ -149,7 +149,7 @@ class CommandNode {
             if (args.size() < 1) {
                 r.addAll(this.children_.keySet());
             }
-        } catch (NodeException ignored) {}
+        } catch (NodeException | NullPointerException ignored) {}
         return r;
     }
 
