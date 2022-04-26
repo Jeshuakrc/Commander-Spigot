@@ -1,4 +1,4 @@
-package com.jkantrell.commander;
+package com.jkantrell.commander.command;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
