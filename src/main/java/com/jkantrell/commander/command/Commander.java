@@ -85,20 +85,27 @@ public class Commander {
     }
 
     public void register(CommandHolder commandHolder) {
+        List<String> classLabels = Collections.emptyList();
+        if (commandHolder.getClass().isAnnotationPresent(Command.class)) {
+            classLabels = List.of(StringUtils.split(commandHolder.getClass().getAnnotation(Command.class).label(),' '));
+        }
+
         for (Method method : commandHolder.getClass().getDeclaredMethods()) {
             if (!method.isAnnotationPresent(Command.class)) { continue; }
 
-            String[] labels = StringUtils.split(method.getAnnotation(Command.class).label(),' ');
+            LinkedList<String> labels = new LinkedList<>(classLabels);
+            labels.addAll(List.of(StringUtils.split(method.getAnnotation(Command.class).label(),' ')));
 
-            CommanderCommand command = this.registrationMap_.get(labels[0]);
+            Iterator<String> i = labels.iterator();
+            String label = i.next();
+            CommanderCommand command = this.getCommand(label);
             if (command == null) {
-                command = new CommanderCommand(this,labels[0], commandHolder);
-                this.registrationMap_.put(labels[0].toLowerCase(),command);
+                command = new CommanderCommand(this,label, commandHolder);
+                this.registrationMap_.put(label.toLowerCase(),command);
             }
-
             CommandNode node = command.head_;
-            for (int i = 1; i < labels.length; i++) {
-                node = node.getNode(labels[i]);
+            while (i.hasNext()) {
+                node = node.getNode(i.next());
             }
 
             node.addMethod(method);
