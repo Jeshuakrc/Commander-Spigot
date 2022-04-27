@@ -4,6 +4,7 @@ import com.jkantrell.commander.CommandHolder;
 import com.jkantrell.commander.provider.CommandProvider;
 import com.jkantrell.commander.provider.builtIn.LocationProvider;
 import com.jkantrell.commander.provider.builtIn.PlayerProvider;
+import com.jkantrell.commander.provider.builtIn.StringProvider;
 import com.jkantrell.commander.provider.builtIn.WorldProvider;
 import org.apache.commons.lang.StringUtils;
 import org.bukkit.Bukkit;
@@ -46,9 +47,7 @@ public class Commander {
         }
         this.commandMap_ = commandMap;
 
-        this.registerProvider(Player.class, new PlayerProvider());
-        this.registerProvider(Location.class, new LocationProvider());
-        this.registerProvider(World.class, new WorldProvider());
+        this.registerBuiltInProviders_();
     }
 
     //GETTERS
@@ -84,6 +83,7 @@ public class Commander {
         this.logLevel_ = level;
     }
 
+    //BEHAVIORAL METHODS
     public void register(CommandHolder commandHolder) {
         List<String> classLabels = Collections.emptyList();
         if (commandHolder.getClass().isAnnotationPresent(Command.class)) {
@@ -111,7 +111,6 @@ public class Commander {
             node.addMethod(method);
         }
     }
-
     public <E> void registerProvider(Class<E> clazz, CommandProvider<E> provider) {
         Class<? extends CommandProvider> providerClass = provider.getClass();
         try {
@@ -121,10 +120,17 @@ public class Commander {
             throw new IllegalArgumentException("'" + providerClass.getSimpleName() + "' must have a no-parameter constructor to be register to a Commander.");
         }
     }
-
     void log(CommandNode node, String msg) {
         StringBuilder builder = new StringBuilder();
         builder.append("[").append(node.getFullPath()).append("] ").append(msg);
         this.logger_.log(this.logLevel_,builder.toString());
+    }
+
+    //PRIVATE METHODS
+    private void registerBuiltInProviders_() {
+        this.registerProvider(Player.class, new PlayerProvider());
+        this.registerProvider(Location.class, new LocationProvider());
+        this.registerProvider(World.class, new WorldProvider());
+        this.registerProvider(String.class, new StringProvider());
     }
 }
