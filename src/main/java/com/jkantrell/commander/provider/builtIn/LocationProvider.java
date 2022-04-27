@@ -4,20 +4,58 @@ import com.jkantrell.commander.command.Argument;
 import com.jkantrell.commander.exception.CommandArgumentException;
 import com.jkantrell.commander.exception.CommandException;
 import com.jkantrell.commander.provider.CommandProvider;
+import com.jkantrell.commander.provider.identify.ExcludeWorld;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.command.BlockCommandSender;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
-
+import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 public class LocationProvider extends CommandProvider<Location> {
 
     private double x_, y_, z_;
     private World world_ = null;
+    private boolean excludeWorld_ = false;
+    private Block block_ = null;
+    private Entity entity_ = null;
+    private WorldProvider worldProvider_ = null;
+
+    @Override
+    protected void onInitialization() {
+        if (this.getCommandSender() instanceof Entity entity) {
+            this.excludeWorld_ = true;
+            this.entity_ = entity;
+            this.world_ = entity.getWorld();
+            if (entity instanceof LivingEntity livingEntity) {
+                Set<Material> transparentSet = Set.of(Material.AIR, Material.WATER, Material.LAVA);
+                for (Block block : livingEntity.getLineOfSight(transparentSet, 15)) {
+                    if (!transparentSet.contains(block.getType())) {
+                        this.block_ = block;
+                    }
+                }
+            }
+        } else if (this.getCommandSender() instanceof BlockCommandSender blockCommandSender) {
+            this.excludeWorld_ = true;
+            this.block_ = blockCommandSender.getBlock();
+        }
+        for (Annotation annotation : this.getAnnotations()) {
+            if (annotation.annotationType().equals(ExcludeWorld.class)) {
+                this.excludeWorld_ = true;
+                break;
+            }
+        }
+        if (!excludeWorld_) {
+            this.worldProvider_ = new WorldProvider();
+            this.worldProvider_.initialize(this.getCommander(), this.getCommandSender(), this.getAnnotations());
+        }
+    }
 
     @Override
     public List<String> suggest() {
@@ -29,12 +67,7 @@ public class LocationProvider extends CommandProvider<Location> {
             builder.setLength((builder.length() - (this.getSupplyConsecutive() * 2)));
             r.add(builder.toString());
 
-            List<Block> lineOfSight = player.getLineOfSight(null,10);
-            if (lineOfSight.isEmpty()) {
-                block = player.getLocation().getBlock();
-            } else {
-                block = lineOfSight.get(0);
-            }
+            block = (this.block_ == null) ? player.getLocation().getBlock() : this.block_;
         } else if (this.getCommandSender() instanceof BlockCommandSender blockCommandSender) {
             block = blockCommandSender.getBlock();
         }
@@ -54,6 +87,9 @@ public class LocationProvider extends CommandProvider<Location> {
                 r.add(builder.toString());
             }
         }
+        if (this.worldProvider_ != null && this.getSupplyConsecutive() > 2) {
+            r.addAll(this.worldProvider_.suggest());
+        }
 
         return r;
     }
@@ -69,10 +105,10 @@ public class LocationProvider extends CommandProvider<Location> {
         double relative = 0;
         if (argument.isRelative()) {
             Location loc;
-            if (this.getCommandSender() instanceof Entity entity) {
-                loc = entity.getLocation();
-            } else if (this.getCommandSender() instanceof BlockCommandSender blockCommandSender) {
-                loc = blockCommandSender.getBlock().getLocation().add(.5,.5,.5);
+            if (this.entity_ != null) {
+                loc = this.entity_.getLocation();
+            } else if (this.block_ != null) {
+                loc = this.block_.getLocation().add(.5,.5,.5);
             } else {
                 throw new CommandArgumentException(argument,"Relative coordinates are not supported here.");
             }
@@ -83,31 +119,14 @@ public class LocationProvider extends CommandProvider<Location> {
                 default -> 0;
             };
         }
-        
-        switch (consecutive) {
-            case 1 -> this.x_ = argument.getDouble() + relative;
-            case 2 -> this.y_ = argument.getDouble() + relative;
-            case 3 -> this.z_ = argument.getDouble() + relative;
-        }
-        
-        boolean canInferWorld = true;
-        if (this.world_ == null) {
-            if (this.getCommandSender() instanceof Entity entity) {
-                this.world_ = entity.getWorld();
-            } else if (this.getCommandSender() instanceof BlockCommandSender blockCommandSender) {
-                this.world_ = blockCommandSender.getBlock().getWorld();
-            } else {
-                canInferWorld = false;
-                if (consecutive > 3) {
-                    WorldProvider worldProvider = new WorldProvider();
-                    worldProvider.initialize(this.getCommander(),this.getCommandSender(),this.getAnnotations());
-                    worldProvider.supply(argument);
-                    this.world_ = worldProvider.provide();
-                }
-            }
-        }
 
-        return canInferWorld ? consecutive > 2 : consecutive > 3;
+        if (this.excludeWorld_ && consecutive > 2) { return true; }
+        if (consecutive > 3) {
+            this.worldProvider_.supply(argument);
+            this.world_ = this.worldProvider_.provide();
+            return true;
+        }
+        return false;
     }
 
     @Override
