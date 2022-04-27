@@ -20,7 +20,7 @@ import java.util.Set;
 
 public class LocationProvider extends CommandProvider<Location> {
 
-    private double x_, y_, z_;
+    private final double[] pos_ = new double[3];
     private World world_ = null;
     private boolean excludeWorld_ = false;
     private Block block_ = null;
@@ -120,6 +120,8 @@ public class LocationProvider extends CommandProvider<Location> {
             };
         }
 
+        this.pos_[consecutive - 1] = argument.getDouble() + relative;
+
         if (this.excludeWorld_ && consecutive > 2) { return true; }
         if (consecutive > 3) {
             this.worldProvider_.supply(argument);
@@ -131,6 +133,6 @@ public class LocationProvider extends CommandProvider<Location> {
 
     @Override
     public Location provide() throws CommandException {
-        return new Location(this.world_,this.x_,this.y_,this.z_);
+        return new Location(this.world_,this.pos_[0],this.pos_[1],this.pos_[2]);
     }
 }
