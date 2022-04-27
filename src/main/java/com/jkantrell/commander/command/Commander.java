@@ -2,15 +2,13 @@ package com.jkantrell.commander.command;
 
 import com.jkantrell.commander.CommandHolder;
 import com.jkantrell.commander.provider.CommandProvider;
-import com.jkantrell.commander.provider.builtIn.LocationProvider;
-import com.jkantrell.commander.provider.builtIn.PlayerProvider;
-import com.jkantrell.commander.provider.builtIn.StringProvider;
-import com.jkantrell.commander.provider.builtIn.WorldProvider;
+import com.jkantrell.commander.provider.builtIn.*;
 import org.apache.commons.lang.StringUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.command.CommandMap;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import java.lang.reflect.Constructor;
@@ -132,5 +130,6 @@ public class Commander {
         this.registerProvider(Location.class, new LocationProvider());
         this.registerProvider(World.class, new WorldProvider());
         this.registerProvider(String.class, new StringProvider());
+        this.registerProvider(CommandSender.class, new SenderProvider());
     }
 }
