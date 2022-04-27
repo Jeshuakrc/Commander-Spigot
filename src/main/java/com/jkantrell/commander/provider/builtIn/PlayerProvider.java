@@ -21,9 +21,9 @@ public class PlayerProvider extends CommandProvider<Player> {
     protected void onInitialization() {
         for (Annotation annotation : getAnnotations()) {
             if (annotation.annotationType().equals(Sender.class)) {
+                this.returnSender = true;
                 if (this.getCommandSender() instanceof Player player) {
                     this.player_ = player;
-                    this.returnSender = true;
                 }
                 this.setReadyToProvide(true);
                 break;
@@ -43,15 +43,6 @@ public class PlayerProvider extends CommandProvider<Player> {
 
     @Override
     public boolean handleArgument(Argument argument) throws CommandException {
-        for (Annotation a : this.getAnnotations()) {
-            if (a.annotationType().equals(Sender.class)) {
-                if (this.getCommandSender() instanceof Player player) {
-                    this.player_ = player;
-                    return true;
-                }
-                throw new CommandUnrunnableException("Only a player can run this command");
-            }
-        }
         this.player_ = this.getCommander().getPlugin().getServer().getPlayer(argument.getString());
         if (this.player_ == null) {
             throw new CommandArgumentException(argument,"There's no online player called '" + argument.getString() +"'.");
