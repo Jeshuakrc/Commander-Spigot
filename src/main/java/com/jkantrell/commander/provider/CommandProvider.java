@@ -29,16 +29,16 @@ public abstract class CommandProvider<E> {
     }
 
     //PROTECTED GETTERS
-    protected Commander getCommander() {
+    protected final Commander getCommander() {
         return this.commander_;
     }
-    protected CommandSender getCommandSender() {
+    protected final CommandSender getCommandSender() {
         return this.commandSender_;
     }
-    protected Annotation[] getAnnotations() {
+    protected final Annotation[] getAnnotations() {
         return this.annotations_;
     }
-    protected int getSupplyConsecutive() {
+    protected final int getSupplyConsecutive() {
         return this.consecutive_;
     }
 
@@ -46,7 +46,7 @@ public abstract class CommandProvider<E> {
     public boolean readyToProvide() {
         return this.readyToProvide_;
     }
-    public boolean isInitialized() {
+    public final boolean isInitialized() {
         return this.isInitialized_;
     }
 
