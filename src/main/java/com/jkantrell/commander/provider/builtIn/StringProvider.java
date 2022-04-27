@@ -35,7 +35,7 @@ public class StringProvider extends CommandProvider<String> {
             this.stringBuilder_.deleteCharAt(0);
         }
         if (this.multiArgument_) {
-            boolean end = arg.charAt(Math.max(arg.length() - 1, 0)) == '\"' && this.getSupplyConsecutive() > 1;
+            boolean end = arg.charAt(Math.max(arg.length() - 1, 0)) == '\"' && !(arg.length() < 2 && this.getSupplyConsecutive() > 1);
             if (end) { this.stringBuilder_.setLength(stringBuilder_.length() - 2); }
             return end;
         }
