@@ -96,28 +96,39 @@ class CommandNode {
         LinkedList<NodeException> exceptions = new LinkedList<>();
         Iterator<MethodHolder> iterator;
         Argument arg;
+        CommandProvider<?> provider;
+        MethodHolder method;
         while (true) {
-            try {
-                arg = args.extract();
-            } catch (NoMoreArgumentsException e) {
-                break;
+            iterator = methods.iterator();
+            while (iterator.hasNext()){
+                method = iterator.next();
+                if (method.providers().isEmpty()) { continue; }
+                provider = method.providers().get(0);
+                if (!provider.readyToProvide()) { continue; }
+                try {
+                    method.vals().add(provider.provide());
+                    method.providers().remove(provider);
+                } catch (CommandException ex) {
+                    exceptions.add(new NodeException(ex, args.getExtractedAmount()));
+                    iterator.remove();
+                }
             }
 
-            CommandProvider<?> provider;
-            iterator = methods.iterator();
-            while (iterator.hasNext()) {
-                holder = iterator.next();
-                if (holder.providers().isEmpty()) { iterator.remove(); continue; }
+            try { arg = args.extract(); } catch (NoMoreArgumentsException ex) { break; }
 
-                boolean readyToProvide;
-                provider = holder.providers().get(0);
-                try {
-                    readyToProvide = provider.readyToProvide();
-                    if (!readyToProvide) { readyToProvide = provider.supply(arg); }
-                    if (readyToProvide) { holder.providers().remove(provider); }
-                } catch (CommandException e) {
+            iterator = methods.iterator();
+            while (iterator.hasNext()){
+                method = iterator.next();
+                if (method.providers().isEmpty()) {
                     iterator.remove();
-                    exceptions.add(new NodeException(e,args.getExtractedAmount()));
+                    continue;
+                }
+                provider = method.providers.get(0);
+                try {
+                    provider.supply(arg);
+                } catch (CommandException ex) {
+                    exceptions.add(new NodeException(ex, args.getExtractedAmount()));
+                    iterator.remove();
                 }
             }
         }
@@ -198,7 +209,7 @@ class CommandNode {
                 } catch (IllegalArgumentException e) {
                     iterator.remove();
                     if (!iterator.hasNext()) {
-                        throw new NodeException(new NoMoreArgumentsException(""),args.getRemainingAmount());
+                        throw new NodeException(new NoMoreArgumentsException(""),args.getExtractedAmount());
                     }
                 } catch (InvocationTargetException e) {
                     iterator.remove();
