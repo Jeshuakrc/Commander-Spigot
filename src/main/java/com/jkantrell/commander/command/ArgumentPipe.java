@@ -1,6 +1,7 @@
 package com.jkantrell.commander.command;
 
 import com.jkantrell.commander.exception.NoMoreArgumentsException;
+import org.apache.commons.lang.StringUtils;
 import org.bukkit.command.CommandSender;
 
 import java.util.*;
@@ -25,10 +26,37 @@ public class ArgumentPipe extends ArrayList<Argument> {
         this.addAll(args);
     }
 
+    public ArgumentPipe(Commander commander, CommanderCommand command, CommandSender sender, String args) {
+        this(commander,command,sender,StringUtils.split(args,' '));
+    }
+
     public ArgumentPipe(Commander commander, CommanderCommand command, CommandSender sender, String[] args) {
         this(commander,command,sender);
+
+        boolean quoted = false;
+        StringBuilder builder = new StringBuilder();
         for (String s : args) {
-            this.add(new Argument(s));
+            if (s.isEmpty()) { continue; }
+
+            builder.append(StringUtils.normalizeSpace(s));
+
+            if (builder.charAt(0) == '\"') {
+                builder.deleteCharAt(0);
+                quoted = true;
+            }
+
+            int lastChar = builder.length() - 1;
+            if (quoted && builder.length() > 1 && builder.charAt(lastChar) == '\"') {
+                builder.deleteCharAt(lastChar);
+                quoted = false;
+            }
+
+            if (quoted) {
+                builder.append(" ");
+            } else {
+                this.add(new Argument(builder.toString()));
+                builder.setLength(0);
+            }
         }
     }
 
@@ -82,5 +110,4 @@ public class ArgumentPipe extends ArrayList<Argument> {
         builder.append("]");
         return builder.toString();
     }
-
 }
