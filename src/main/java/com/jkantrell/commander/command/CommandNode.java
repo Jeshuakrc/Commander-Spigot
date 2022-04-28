@@ -96,18 +96,23 @@ class CommandNode {
         LinkedList<NodeException> exceptions = new LinkedList<>();
         Iterator<MethodHolder> iterator;
         Argument arg;
-        CommandProvider<?> provider;
+        CommandProvider<?> provider = null;
         MethodHolder method;
         while (true) {
             iterator = methods.iterator();
             while (iterator.hasNext()){
                 method = iterator.next();
-                if (method.providers().isEmpty()) { continue; }
-                provider = method.providers().get(0);
-                if (!provider.readyToProvide()) { continue; }
+                Iterator<CommandProvider<?>> providers = method.providers().iterator();
                 try {
-                    method.vals().add(provider.provide());
-                    method.providers().remove(provider);
+                    while (providers.hasNext()) {
+                        provider = providers.next();
+                        if (provider.readyToProvide()) {
+                            method.vals().add(provider.provide());
+                            providers.remove();
+                            continue;
+                        }
+                        break;
+                    }
                 } catch (CommandException ex) {
                     exceptions.add(new NodeException(ex, args.getExtractedAmount()));
                     iterator.remove();
