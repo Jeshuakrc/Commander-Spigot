@@ -8,9 +8,8 @@ import com.jkantrell.commander.provider.CommandProvider;
 import com.jkantrell.commander.provider.identify.Sender;
 import org.bukkit.entity.Player;
 import java.lang.annotation.Annotation;
-import java.util.Collection;
-import java.util.LinkedList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class PlayerProvider extends CommandProvider<Player> {
 
@@ -33,12 +32,9 @@ public class PlayerProvider extends CommandProvider<Player> {
 
     @Override
     public List<String> suggest() {
-        Collection<? extends Player> players = this.getCommander().getPlugin().getServer().getOnlinePlayers();
-        LinkedList<String> r = new LinkedList<>();
-        for (Player player : players) {
-            r.add(player.getName());
-        }
-        return r;
+        return this.getCommander().getPlugin().getServer().getOnlinePlayers().stream()
+                .map(Player::getName)
+                .collect(Collectors.toList());
     }
 
     @Override

@@ -5,9 +5,8 @@ import com.jkantrell.commander.exception.CommandArgumentException;
 import com.jkantrell.commander.exception.CommandException;
 import com.jkantrell.commander.provider.CommandProvider;
 import org.bukkit.World;
-
-import java.util.LinkedList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class WorldProvider extends CommandProvider<World> {
 
@@ -15,10 +14,9 @@ public class WorldProvider extends CommandProvider<World> {
 
     @Override
     public List<String> suggest() {
-        List<World> worlds = this.getCommander().getPlugin().getServer().getWorlds();
-        List<String> r = new LinkedList<>();
-        for (World world : worlds) { r.add(world.getName()); }
-        return r;
+        return this.getCommander().getPlugin().getServer().getWorlds().stream()
+                .map(World::getName)
+                .collect(Collectors.toList());
     }
 
     @Override
