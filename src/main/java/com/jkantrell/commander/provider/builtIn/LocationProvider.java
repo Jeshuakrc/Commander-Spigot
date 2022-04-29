@@ -13,7 +13,6 @@ import org.bukkit.command.BlockCommandSender;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
-import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -45,15 +44,10 @@ public class LocationProvider extends CommandProvider<Location> {
             this.excludeWorld_ = true;
             this.block_ = blockCommandSender.getBlock();
         }
-        for (Annotation annotation : this.getAnnotations()) {
-            if (annotation.annotationType().equals(ExcludeWorld.class)) {
-                this.excludeWorld_ = true;
-                break;
-            }
-        }
+        this.excludeWorld_ = this.isAnnotationPresent(ExcludeWorld.class);
         if (!excludeWorld_) {
             this.worldProvider_ = new WorldProvider();
-            this.worldProvider_.initialize(this.getCommander(), this.getCommandSender(), this.getAnnotations());
+            this.worldProvider_.initialize(this.getCommander(), this.getCommandSender(), this.getParameter());
         }
     }
 

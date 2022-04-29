@@ -88,7 +88,7 @@ class CommandNode {
             methods.add(holder);
             for (Parameter parameter : method.getParameters()) {
                 CommandProvider<?> provider = this.commander_.getProvider(parameter.getType());
-                provider.initialize(this.commander_,sender,parameter.getAnnotations());
+                provider.initialize(this.commander_,sender,parameter);
                 holder.providers().add(provider);
             }
         }

@@ -7,7 +7,6 @@ import com.jkantrell.commander.exception.CommandUnrunnableException;
 import com.jkantrell.commander.provider.CommandProvider;
 import com.jkantrell.commander.provider.identify.Sender;
 import org.bukkit.entity.Player;
-import java.lang.annotation.Annotation;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -18,15 +17,10 @@ public class PlayerProvider extends CommandProvider<Player> {
 
     @Override
     protected void onInitialization() {
-        for (Annotation annotation : getAnnotations()) {
-            if (annotation.annotationType().equals(Sender.class)) {
-                this.returnSender = true;
-                if (this.getCommandSender() instanceof Player player) {
-                    this.player_ = player;
-                }
-                this.setReadyToProvide(true);
-                break;
-            }
+        if (this.isAnnotationPresent(Sender.class)) {
+            this.returnSender = true;
+            if (this.getCommandSender() instanceof Player player) { this.player_ = player; }
+            this.setReadyToProvide(true);
         }
     }
 
