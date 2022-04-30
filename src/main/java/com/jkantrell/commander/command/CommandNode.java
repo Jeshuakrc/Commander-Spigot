@@ -3,12 +3,11 @@ package com.jkantrell.commander.command;
 import com.jkantrell.commander.exception.CommandException;
 import com.jkantrell.commander.exception.CommandUnrunnableException;
 import com.jkantrell.commander.exception.NoMoreArgumentsException;
-import com.jkantrell.commander.provider.CommandProvider;
+import com.jkantrell.commander.command.provider.CommandProvider;
 import org.apache.commons.lang.StringUtils;
 import org.bukkit.command.CommandSender;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.lang.reflect.Parameter;
 import java.util.*;
 
 class CommandNode {
@@ -19,6 +18,7 @@ class CommandNode {
     private final HashMap<String, CommandNode> children_ = new HashMap<>();
     private final CommandNode parent_;
     private final Object commandHolder_;
+    private final ArrayList<CommandEndpoint> endpoints_ = new ArrayList<>();
     private final ArrayList<Method> methods_ = new ArrayList<>();
 
     //ASSETS
@@ -57,14 +57,19 @@ class CommandNode {
 
         return this.children_.get(label);
     }
+    Commander getCommander() {
+        return this.commander_;
+    }
+    Object getCommandHolder() {
+        return this.commandHolder_;
+    }
     public String getLabel() {
         return this.label_;
     }
 
-
     //PUBLIC METHODS
     void addMethod(Method method) {
-        this.methods_.add(method);
+        this.endpoints_.add(new CommandEndpoint(this,method));
     }
 
     String getFullPath () {
@@ -80,70 +85,31 @@ class CommandNode {
         return builder.toString();
     }
 
-    private List<MethodHolder> getMethods(CommandSender sender, ArgumentPipe args) throws NodeException {
-        List<MethodHolder> methods = new ArrayList<>();
-        MethodHolder holder;
-        for (Method method : this.methods_) {
-            holder = new MethodHolder(method,new ArrayList<>(),new ArrayList<>());
-            methods.add(holder);
-            for (Parameter parameter : method.getParameters()) {
-                CommandProvider<?> provider = this.commander_.getProvider(parameter.getType());
-                provider.initialize(this.commander_,sender,parameter);
-                holder.providers().add(provider);
-            }
-        }
-
+    private List<CommandEndpoint> getEndpoints(CommandSender sender, ArgumentPipe args) throws NodeException {
+        List<CommandEndpoint> endpoints = new LinkedList<>(this.endpoints_);
+        endpoints.forEach(e -> e.initialize(sender));
         LinkedList<NodeException> exceptions = new LinkedList<>();
-        Iterator<MethodHolder> iterator;
         Argument arg;
-        CommandProvider<?> provider = null;
-        MethodHolder method;
+
         while (true) {
-            iterator = methods.iterator();
-            while (iterator.hasNext()){
-                method = iterator.next();
-                Iterator<CommandProvider<?>> providers = method.providers().iterator();
-                try {
-                    while (providers.hasNext()) {
-                        provider = providers.next();
-                        if (provider.readyToProvide()) {
-                            method.vals().add(provider.provide());
-                            providers.remove();
-                            continue;
-                        }
-                        break;
-                    }
-                } catch (CommandException ex) {
-                    exceptions.add(new NodeException(ex, args.getExtractedAmount()));
-                    iterator.remove();
-                }
-            }
-
             try { arg = args.extract(); } catch (NoMoreArgumentsException ex) { break; }
-
-            iterator = methods.iterator();
-            while (iterator.hasNext()){
-                method = iterator.next();
-                if (method.providers().isEmpty()) {
-                    iterator.remove();
-                    continue;
-                }
-                provider = method.providers.get(0);
+            Iterator<CommandEndpoint> i = endpoints.iterator();
+            while (i.hasNext()) {
+                CommandEndpoint endpoint = i.next();
+                if (endpoint.isReadyToRun()) { i.remove(); continue; }
                 try {
-                    provider.supply(arg);
-                } catch (CommandException ex) {
-                    exceptions.add(new NodeException(ex, args.getExtractedAmount()));
-                    iterator.remove();
+                    endpoint.supplyArgument(arg);
+                } catch (CommandException e) {
+                    i.remove();
+                    exceptions.add(new NodeException(e,args.getExtractedAmount()));
                 }
             }
         }
-
-        if (methods.isEmpty() && !exceptions.isEmpty()) {
+        if (endpoints.isEmpty() && !exceptions.isEmpty()) {
             exceptions.sort(Comparator.comparingInt(a -> a.level_));
             throw exceptions.getLast();
         }
-
-        return methods;
+        return endpoints;
     }
 
     List<String> suggest(CommandSender sender, ArgumentPipe args) {
@@ -156,11 +122,8 @@ class CommandNode {
             subArgs.remove(0);
             r.addAll(this.children_.get(args.get(0).getString()).suggest(sender,subArgs));
         }
-
         try {
-            for (MethodHolder holder : this.getMethods(sender,args)) {
-                if (!holder.providers().isEmpty()) { r.addAll(holder.providers().get(0).suggest()); }
-            }
+            this.getEndpoints(sender, args).stream().map(CommandEndpoint::suggest).forEach(r::addAll);
 
             if (args.size() < 1) {
                 r.addAll(this.children_.keySet());
@@ -195,51 +158,31 @@ class CommandNode {
 
 
         try {
-            List<MethodHolder> methods = this.getMethods(sender, args);
+            List<CommandEndpoint> endpoints = this.getEndpoints(sender, args);
 
-            if (methods.isEmpty()) {
+            if (endpoints.isEmpty()) {
                 throw new NodeException(new CommandUnrunnableException("Unknown command"),0);
-            } else if (methods.size() > 1) {
-                methods.sort(Comparator.comparingInt(a -> a.method().getParameterCount()));
-                methods.removeIf(a -> a.method().getParameterCount() > methods.get(0).method().getParameterCount());
+            } else if (endpoints.size() > 1) {
+                endpoints.sort(Comparator.comparingInt(CommandEndpoint::getParameterCount));
+                endpoints.removeIf(e -> e.getParameterCount() > endpoints.get(0).getParameterCount());
             }
 
             Object r = null;
-            Iterator<MethodHolder> iterator = methods.iterator();
-            MethodHolder method;
+            Iterator<CommandEndpoint> iterator = endpoints.iterator();
+            CommandEndpoint endpoint;
             while (iterator.hasNext()) {
-                method = iterator.next();
+                endpoint = iterator.next();
                 try {
-                    r = method.invoke(this.commandHolder_);
-                } catch (IllegalArgumentException e) {
+                    r = endpoint.run();
+                } catch (CommandException e) {
                     iterator.remove();
                     if (!iterator.hasNext()) {
-                        throw new NodeException(new NoMoreArgumentsException(""),args.getExtractedAmount());
+                        throw new NodeException(e,args.getExtractedAmount());
                     }
-                } catch (InvocationTargetException e) {
-                    iterator.remove();
-                    Throwable innerException = e.getTargetException();
-
-                    CommandException ex;
-                    if (innerException instanceof CommandException commandException) {
-                        ex = commandException;
-                    } else {
-                        ex = new CommandUnrunnableException("An error occurred while running command.");
-                        this.commander_.getPlugin().getLogger().severe("Unhandled exception while executing command '" + this.getFullPath() + "'.");
-                        e.printStackTrace();
-                    }
-                    if (!iterator.hasNext()) {
-                        throw new NodeException(ex,args.getRemainingAmount());
-                    }
-                } catch (IllegalAccessException e) {
-                    iterator.remove();
-                    this.commander_.getLogger().severe(
-                    "Illegal access to method '" + method.method().getName() + "' from class '" + method.method().getDeclaringClass().getName() + "'."
-                    );
                 }
             }
 
-            if (methods.size() > 1) {
+            if (endpoints.size() > 1) {
                 this.commander_.getLogger().warning("Ambiguity executing command '" + this.getFullPath() + "'.");
             }
 
@@ -253,11 +196,7 @@ class CommandNode {
             }
         }
 
-        if (subCall) {
-            throw exception;
-        } else {
-            throw exception.innerException_;
-        }
+        if (subCall) { throw exception; } else { throw exception.innerException_; }
     }
 
     private void log (String msg){

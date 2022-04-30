@@ -1,7 +1,6 @@
 package com.jkantrell.commander.exception;
 
 import com.jkantrell.commander.command.Argument;
-import com.jkantrell.commander.command.ArgumentPipe;
 
 public class CommandArgumentException extends CommandException {
 

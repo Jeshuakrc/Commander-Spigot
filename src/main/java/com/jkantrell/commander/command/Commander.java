@@ -1,8 +1,7 @@
 package com.jkantrell.commander.command;
 
-import com.jkantrell.commander.CommandHolder;
-import com.jkantrell.commander.provider.CommandProvider;
-import com.jkantrell.commander.provider.builtIn.*;
+import com.jkantrell.commander.command.provider.CommandProvider;
+import com.jkantrell.commander.command.provider.builtIn.*;
 import org.apache.commons.lang.StringUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;

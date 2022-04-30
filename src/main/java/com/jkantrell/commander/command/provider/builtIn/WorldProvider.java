@@ -1,9 +1,9 @@
-package com.jkantrell.commander.provider.builtIn;
+package com.jkantrell.commander.command.provider.builtIn;
 
 import com.jkantrell.commander.command.Argument;
 import com.jkantrell.commander.exception.CommandArgumentException;
 import com.jkantrell.commander.exception.CommandException;
-import com.jkantrell.commander.provider.CommandProvider;
+import com.jkantrell.commander.command.provider.CommandProvider;
 import org.bukkit.World;
 import java.util.List;
 import java.util.stream.Collectors;

@@ -1,10 +1,10 @@
-package com.jkantrell.commander.provider.builtIn;
+package com.jkantrell.commander.command.provider.builtIn;
 
 import com.jkantrell.commander.command.Argument;
 import com.jkantrell.commander.exception.CommandArgumentException;
 import com.jkantrell.commander.exception.CommandException;
-import com.jkantrell.commander.provider.CommandProvider;
-import com.jkantrell.commander.provider.identify.ExcludeWorld;
+import com.jkantrell.commander.command.provider.CommandProvider;
+import com.jkantrell.commander.command.provider.identify.ExcludeWorld;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
@@ -47,7 +47,7 @@ public class LocationProvider extends CommandProvider<Location> {
         this.excludeWorld_ = this.isAnnotationPresent(ExcludeWorld.class);
         if (!excludeWorld_) {
             this.worldProvider_ = new WorldProvider();
-            this.worldProvider_.initialize(this.getCommander(), this.getCommandSender(), this.getParameter());
+            this.worldProvider_.initialize(this);
         }
     }
 

@@ -1,6 +1,4 @@
-package com.jkantrell.commander.provider;
-
-import com.jkantrell.commander.exception.CommandArgumentException;
+package com.jkantrell.commander.exception;
 
 public class CommandProviderException extends RuntimeException {
     public CommandProviderException() {
