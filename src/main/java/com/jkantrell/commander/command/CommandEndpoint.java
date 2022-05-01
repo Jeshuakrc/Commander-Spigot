@@ -8,6 +8,7 @@ import org.bukkit.command.CommandSender;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -18,7 +19,6 @@ public class CommandEndpoint {
     private final Commander commander_;
     private final Method method_;
     private final LinkedList<CommandProvider<?>> providers_ = new LinkedList<>();
-    private final LinkedList<CommandProvider<?>> providerTrace_ = new LinkedList<>();
     private int pointer_ = 0;
     private boolean readyToRun_ = false;
 
@@ -43,8 +43,8 @@ public class CommandEndpoint {
         this.providers_.clear();
         for (Parameter parameter : this.method_.getParameters()) {
             CommandProvider<?> provider = this.commander_.getProvider(parameter.getType());
-            provider.initialize(this.commander_,sender,parameter,this.providerTrace_);
             this.providers_.add(provider);
+            provider.initialize(this.commander_,sender,parameter,new ArrayList<>(this.providers_));
         }
         if (this.providers_.isEmpty()) { this.readyToRun_ = true; return; }
         this.readyToRun_ = this.providers_.stream().allMatch(CommandProvider::readyToProvide);
@@ -87,8 +87,10 @@ public class CommandEndpoint {
 
     Object run() throws CommandException {
         LinkedList<Object> vals = new LinkedList<>();
-        for (CommandProvider<?> provider : this.providerTrace_) {
-            vals.add(provider.provide());
+        for (CommandProvider<?> provider : this.providers_) {
+            if (provider.readyToProvide()) {
+                vals.add(provider.provide());
+            } else { break; }
         }
         try {
             return this.method_.invoke(this.parent_.getCommandHolder(), vals.toArray());

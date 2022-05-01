@@ -1,13 +1,11 @@
 package com.jkantrell.commander.command.provider;
 
 import com.jkantrell.commander.command.Argument;
-import com.jkantrell.commander.command.Command;
 import com.jkantrell.commander.command.CommandEndpoint;
 import com.jkantrell.commander.command.Commander;
 import com.jkantrell.commander.exception.CommandException;
 import com.jkantrell.commander.exception.CommandProviderException;
 import org.bukkit.command.CommandSender;
-
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Parameter;
 import java.util.Collections;
@@ -21,7 +19,7 @@ public abstract class CommandProvider<E> {
     private Parameter parameter_ = null;
     private boolean isInitialized_ = false;
     private boolean readyToProvide_ = false;
-    private List<CommandProvider<?>> providerTrace_ = Collections.emptyList();
+    private List<CommandProvider<?>> invocationProviders_ = Collections.emptyList();
 
     public final void initialize(Commander commander, CommandSender sender, Parameter parameter) {
         this.consecutive_ = 0;
@@ -33,11 +31,11 @@ public abstract class CommandProvider<E> {
         this.onInitialization();
     }
     public final void initialize(CommandProvider<?> reference) {
-        this.initialize(reference.commander_,reference.commandSender_,reference.parameter_,reference.providerTrace_);
+        this.initialize(reference.commander_,reference.commandSender_,reference.parameter_,reference.invocationProviders_);
     }
-    public final void initialize(Commander commander, CommandSender sender, Parameter parameter, List<CommandProvider<?>> providerTrace) {
+    public final void initialize(Commander commander, CommandSender sender, Parameter parameter, List<CommandProvider<?>> invocationProviders) {
+        this.invocationProviders_ = invocationProviders;
         this.initialize(commander,sender,parameter);
-        this.providerTrace_ = providerTrace;
     }
 
     //PROTECTED GETTERS
@@ -62,8 +60,8 @@ public abstract class CommandProvider<E> {
     protected final int getSupplyConsecutive() {
         return this.consecutive_;
     }
-    protected final List<CommandProvider<?>> getProviderTrace() {
-        return this.providerTrace_.stream().toList();
+    protected final List<CommandProvider<?>> getInvocationProviders() {
+        return this.invocationProviders_;
     }
 
     //PUBLIC GETTERS
