@@ -9,6 +9,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -35,6 +36,9 @@ public class CommandEndpoint {
     }
     int getParameterCount() {
         return this.method_.getParameterCount();
+    }
+    int consumedArguments() {
+        return this.pointer_;
     }
 
     //METHODS
@@ -82,7 +86,7 @@ public class CommandEndpoint {
                 .findFirst()
                 .orElse(null);
 
-        return (provider == null) ? null : provider.suggest();
+        return (provider == null) ? Collections.emptyList() : provider.suggest();
     }
 
     Object run() throws CommandException {

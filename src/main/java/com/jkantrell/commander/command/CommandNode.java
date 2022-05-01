@@ -163,7 +163,7 @@ class CommandNode {
             if (endpoints.isEmpty()) {
                 throw new NodeException(new CommandUnrunnableException("Unknown command"),0);
             } else if (endpoints.size() > 1) {
-                endpoints.sort(Comparator.comparingInt(CommandEndpoint::getParameterCount));
+                endpoints.sort(Comparator.comparingInt(CommandEndpoint::consumedArguments));
                 endpoints.removeIf(e -> e.getParameterCount() > endpoints.get(0).getParameterCount());
             }
 
@@ -174,6 +174,7 @@ class CommandNode {
                 endpoint = iterator.next();
                 try {
                     r = endpoint.run();
+                    break;
                 } catch (CommandException e) {
                     iterator.remove();
                     if (!iterator.hasNext()) {
