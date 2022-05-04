@@ -85,16 +85,27 @@ class CommandNode {
     }
 
     private List<CommandEndpoint> getEndpoints(CommandSender sender, ArgumentPipe args) throws NodeException {
-        List<CommandEndpoint> endpoints = new LinkedList<>(this.endpoints_);
-        endpoints.forEach(e -> e.initialize(sender));
         LinkedList<NodeException> exceptions = new LinkedList<>();
-        Argument arg;
+        List<CommandEndpoint> endpoints = new LinkedList<>(this.endpoints_);
+        Iterator<CommandEndpoint> i = endpoints.iterator();
+        CommandEndpoint endpoint;
 
+        while (i.hasNext()) {
+            endpoint = i.next();
+            try {
+                endpoint.initialize(sender);
+            } catch (CommandException e) {
+                i.remove();
+                exceptions.add(new NodeException(e,0));
+            }
+        }
+
+        Argument arg;
         while (true) {
             try { arg = args.extract(); } catch (NoMoreArgumentsException ex) { break; }
-            Iterator<CommandEndpoint> i = endpoints.iterator();
+            i = endpoints.iterator();
             while (i.hasNext()) {
-                CommandEndpoint endpoint = i.next();
+                endpoint = i.next();
                 if (endpoint.isReadyToRun()) { i.remove(); continue; }
                 try {
                     endpoint.supplyArgument(arg);

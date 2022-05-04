@@ -27,7 +27,7 @@ public class LocationProvider extends CommandProvider<Location> {
     private WorldProvider worldProvider_ = null;
 
     @Override
-    protected void onInitialization() {
+    protected void onInitialization() throws CommandException {
         if (this.getCommandSender() instanceof Entity entity) {
             this.excludeWorld_ = true;
             this.entity_ = entity;

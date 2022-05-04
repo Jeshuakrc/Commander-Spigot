@@ -6,6 +6,8 @@ import com.jkantrell.commander.exception.CommandUnrunnableException;
 import com.jkantrell.commander.exception.NoMoreArgumentsException;
 import com.jkantrell.commander.command.provider.CommandProvider;
 import org.bukkit.command.CommandSender;
+
+import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
@@ -55,12 +57,25 @@ public class CommandEndpoint {
     }
 
     //METHODS
-    void initialize(CommandSender sender) {
+    void initialize(CommandSender sender) throws CommandException {
         this.sender_ = sender;
         this.pointer_ = 0;
         this.providers_.clear();
         for (Parameter parameter : this.method_.getParameters()) {
-            CommandProvider<?> provider = this.commander_.getProvider(parameter.getType());
+            CommandProvider<?> provider = null;
+            Annotation[] annotations = parameter.getAnnotations();
+            if (annotations.length > 0) {
+                provider = this.commander_.getProvider(annotations[annotations.length - 1].annotationType(), parameter.getType());
+            }
+            if (provider == null) {
+                provider = this.commander_.getProvider(null,parameter.getType());
+            }
+            if (provider == null) {
+                this.commander_.getLogger().severe(
+                        "Una ble to execute command '" + this.parent_.getFullPath() + "'. No command provider found for type " + parameter.getType().getSimpleName() + "."
+                );
+                throw new CommandUnrunnableException("An error occurred running this command.");
+            }
             this.providers_.add(provider);
             provider.initialize(this.commander_,sender,parameter,new ArrayList<>(this.providers_));
         }

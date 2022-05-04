@@ -21,7 +21,7 @@ public abstract class CommandProvider<E> {
     private boolean readyToProvide_ = false;
     private List<CommandProvider<?>> invocationProviders_ = Collections.emptyList();
 
-    public final void initialize(Commander commander, CommandSender sender, Parameter parameter) {
+    public final void initialize(Commander commander, CommandSender sender, Parameter parameter) throws CommandException {
         this.consecutive_ = 0;
         this.commander_ = commander;
         this.commandSender_ = sender;
@@ -30,10 +30,10 @@ public abstract class CommandProvider<E> {
 
         this.onInitialization();
     }
-    public final void initialize(CommandProvider<?> reference) {
+    public final void initialize(CommandProvider<?> reference) throws CommandException {
         this.initialize(reference.commander_,reference.commandSender_,reference.parameter_,reference.invocationProviders_);
     }
-    public final void initialize(Commander commander, CommandSender sender, Parameter parameter, List<CommandProvider<?>> invocationProviders) {
+    public final void initialize(Commander commander, CommandSender sender, Parameter parameter, List<CommandProvider<?>> invocationProviders) throws CommandException {
         this.invocationProviders_ = invocationProviders;
         this.initialize(commander,sender,parameter);
     }
@@ -91,7 +91,7 @@ public abstract class CommandProvider<E> {
         this.readyToProvide_ = this.handleArgument(argument);
         return this.readyToProvide_;
     }
-    protected void onInitialization() {}
+    protected void onInitialization() throws CommandException {}
 
     //ABSTRACT METHODS
     abstract public List<String> suggest();
