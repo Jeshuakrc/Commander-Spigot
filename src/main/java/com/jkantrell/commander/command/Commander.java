@@ -1,5 +1,7 @@
 package com.jkantrell.commander.command;
 
+import com.jkantrell.commander.command.annotations.Command;
+import com.jkantrell.commander.command.annotations.Requires;
 import com.jkantrell.commander.command.provider.CommandProvider;
 import com.jkantrell.commander.command.provider.builtIn.*;
 import org.apache.commons.lang.StringUtils;
@@ -105,7 +107,12 @@ public class Commander {
                 node = node.getNode(i.next());
             }
 
-            node.addMethod(method);
+            String perm = null;
+            if (method.isAnnotationPresent(Requires.class)) {
+                perm = method.getAnnotation(Requires.class).permission();
+            }
+
+            node.addMethod(method,perm);
         }
     }
     public <E> void registerProvider(Class<E> clazz, CommandProvider<E> provider) {

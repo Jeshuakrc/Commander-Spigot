@@ -1,24 +1,27 @@
 package com.jkantrell.commander.command;
 
-import com.jkantrell.commander.exception.CommandArgumentException;
-import com.jkantrell.commander.exception.CommandException;
-import com.jkantrell.commander.exception.CommandUnrunnableException;
-import com.jkantrell.commander.exception.NoMoreArgumentsException;
+import com.jkantrell.commander.exception.*;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.defaults.BukkitCommand;
+import org.bukkit.permissions.PermissionAttachment;
 
-import java.util.List;
+import java.util.*;
 
 class CommanderCommand extends BukkitCommand {
     protected final CommandNode head_;
     private final Commander commander_;
+    private final List<String> perms_ = new LinkedList<>();
 
     CommanderCommand(Commander commander, String name, Object commandHolder) {
         super(name);
         this.commander_ = commander;
-        this.head_ = new CommandNode(commander,this.getName(),commandHolder);
+        this.head_ = new CommandNode(this,this.getName(),commandHolder);
         this.commander_.getCommandMap().register(this.commander_.getPlugin().getName(),this);
+    }
+
+    Commander getCommander() {
+        return this.commander_;
     }
 
     void Unregister() {
@@ -51,13 +54,51 @@ class CommanderCommand extends BukkitCommand {
             if (e instanceof CommandUnrunnableException) {
                 message.append(e.getMessage());
             }
+            if (e instanceof CommandNotAllowedException) {
+                message.append(e.getMessage());
+            }
 
             sender.sendMessage(message.toString());
             return false;
         }
     }
-
     public List<String> suggest(CommandSender sender, String[] args) {
         return this.head_.suggest(sender, new ArgumentPipe(this.commander_,this,sender,args));
+    }
+    public void addPermission(String permission) {
+        this.perms_.add(permission);
+        this.composePermission_();
+    }
+    public boolean removePermission(String permission) {
+        boolean r = this.perms_.remove(permission);
+        if (r) { this.composePermission_(); }
+        return r;
+    }
+    public boolean removeAllPermissions(String permission) {
+        boolean r = this.perms_.removeIf(s -> s.equals(permission));
+        if (r) { this.composePermission_(); }
+        return r;
+    }
+
+    //PRIVATE METHODS
+    private void composePermission_() {
+        /*
+        StringBuilder builder = new StringBuilder();
+        Iterator<String> i = this.perms_.stream().distinct().toList().iterator();
+        String perm;
+        while (true) {
+            perm = i.next();
+            if (perm == null) {
+                this.setPermission(null);
+                return;
+            }
+            builder.append(perm);
+            if (!i.hasNext()) { break; }
+            builder.append(";");
+        }
+        perm = builder.isEmpty() ? null : builder.toString();
+        this.setPermission(perm);
+        this.commander_.getLogger().info(this.getPermission());
+         */
     }
 }

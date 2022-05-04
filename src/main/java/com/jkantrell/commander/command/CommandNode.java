@@ -3,10 +3,8 @@ package com.jkantrell.commander.command;
 import com.jkantrell.commander.exception.CommandException;
 import com.jkantrell.commander.exception.CommandUnrunnableException;
 import com.jkantrell.commander.exception.NoMoreArgumentsException;
-import com.jkantrell.commander.command.provider.CommandProvider;
 import org.apache.commons.lang.StringUtils;
 import org.bukkit.command.CommandSender;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.*;
 
@@ -16,18 +14,13 @@ class CommandNode {
     private final String label_;
     private final Commander commander_;
     private final HashMap<String, CommandNode> children_ = new HashMap<>();
-    private final CommandNode parent_;
+    private final CommandNode parentNode_;
+    private final CommanderCommand parentCommand_;
     private final Object commandHolder_;
     private final ArrayList<CommandEndpoint> endpoints_ = new ArrayList<>();
-    private final ArrayList<Method> methods_ = new ArrayList<>();
+    private final List<String> perms_ = new LinkedList<>();
 
     //ASSETS
-    private record MethodHolder(Method method, List<CommandProvider<?>> providers, List<Object> vals) {
-        Object invoke (Object commandHolder) throws InvocationTargetException, IllegalAccessException {
-            this.method().setAccessible(true);
-            return this.method().invoke(commandHolder,this.vals.toArray());
-        }
-    }
     private static class NodeException extends Exception {
         private final CommandException innerException_;
         private int level_;
@@ -36,15 +29,16 @@ class CommandNode {
 
     //CONSTRUCTORS
     private CommandNode(CommandNode parent, String label, Object holder) {
-        this.parent_ = parent;
-        this.commander_ = this.parent_.commander_;
+        this.parentNode_ = parent;
+        this.parentCommand_ = null;
+        this.commander_ = this.parentNode_.commander_;
         this.label_ = label;
         this.commandHolder_ = holder;
     }
-
-    CommandNode(Commander commander, String label, Object holder) {
-        this.parent_ = null;
-        this.commander_ = commander;
+    CommandNode(CommanderCommand parent, String label, Object holder) {
+        this.parentNode_ = null;
+        this.parentCommand_ = parent;
+        this.commander_ = this.parentCommand_.getCommander();
         this.label_ = label;
         this.commandHolder_ = holder;
     }
@@ -69,7 +63,12 @@ class CommandNode {
 
     //PUBLIC METHODS
     void addMethod(Method method) {
-        this.endpoints_.add(new CommandEndpoint(this,method));
+        this.addMethod(method,null);
+    }
+    void addMethod(Method method, String permission) {
+        CommandEndpoint endpoint = new CommandEndpoint(this,method);
+        endpoint.setPermission(permission);
+        this.endpoints_.add(endpoint);
     }
 
     String getFullPath () {
@@ -77,7 +76,7 @@ class CommandNode {
         CommandNode node = this;
         do {
             builder.append(StringUtils.reverse(node.label_)).append(" ");
-            node = node.parent_;
+            node = node.parentNode_;
         } while (node != null);
         builder.setLength(builder.length() - 1);
         builder.reverse();
@@ -116,19 +115,49 @@ class CommandNode {
         List<String> r = new LinkedList<>();
 
         if (args.size() < 1) {
-            r.addAll(this.children_.keySet());
+            this.children_.keySet().stream().filter(s -> this.children_.get(s).testPermission(sender)).forEach(r::add);
         } else if (this.children_.containsKey(args.get(0).getString())) {
             ArgumentPipe subArgs = args.CopyFromRemaining();
             subArgs.remove(0);
             r.addAll(this.children_.get(args.get(0).getString()).suggest(sender,subArgs));
         }
         try {
-            this.getEndpoints(sender, args).stream().map(CommandEndpoint::suggest).forEach(r::addAll);
+            this.getEndpoints(sender, args).stream().map(CommandEndpoint::suggest).forEach(l -> { if (l != null) r.addAll(l); });
+        } catch (NodeException ignored) {}
+        return r;
+    }
 
-            if (args.size() < 1) {
-                r.addAll(this.children_.keySet());
-            }
-        } catch (NodeException | NullPointerException ignored) {}
+    boolean testPermission(CommandSender sender) {
+        if (this.perms_.stream().anyMatch(sender::hasPermission)) { return true; }
+        return this.children_.values().stream().anyMatch(c -> c.testPermission(sender));
+    }
+
+    public void addPermission(String permission) {
+        this.perms_.add(permission);
+        if (this.parentCommand_ != null) {
+            this.parentCommand_.addPermission(permission);
+        }
+        if (this.parentNode_ != null) {
+            this.parentNode_.addPermission(permission);
+        }
+    }
+    public boolean removePermission(String permission) {
+        boolean r = this.perms_.remove(permission);
+        if (!r) { return false; }
+        if (this.parentCommand_ != null) {
+            this.parentCommand_.removePermission(permission);
+        }
+        if (this.parentNode_ != null) {
+            this.parentNode_.removePermission(permission);
+        }
+        return true;
+    }
+    public boolean removeAllPermissions(String permission) {
+        boolean r = false;
+        while (this.perms_.contains(permission)) {
+            this.perms_.remove(permission);
+            r = true;
+        }
         return r;
     }
 

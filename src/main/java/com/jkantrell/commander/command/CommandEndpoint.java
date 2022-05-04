@@ -1,6 +1,7 @@
 package com.jkantrell.commander.command;
 
 import com.jkantrell.commander.exception.CommandException;
+import com.jkantrell.commander.exception.CommandNotAllowedException;
 import com.jkantrell.commander.exception.CommandUnrunnableException;
 import com.jkantrell.commander.exception.NoMoreArgumentsException;
 import com.jkantrell.commander.command.provider.CommandProvider;
@@ -22,6 +23,8 @@ public class CommandEndpoint {
     private final LinkedList<CommandProvider<?>> providers_ = new LinkedList<>();
     private int pointer_ = 0;
     private boolean readyToRun_ = false;
+    private String permission_ = null;
+    private CommandSender sender_ = null;
 
     //CONSTRUCTOR
     CommandEndpoint(CommandNode parent, Method method) {
@@ -40,9 +43,20 @@ public class CommandEndpoint {
     int consumedArguments() {
         return this.pointer_;
     }
+    String getPermission() {
+        return this.permission_;
+    }
+
+    //Setters
+    void setPermission(String permission) {
+        this.parent_.removePermission(this.permission_);
+        this.permission_ = permission;
+        this.parent_.addPermission(this.permission_);
+    }
 
     //METHODS
     void initialize(CommandSender sender) {
+        this.sender_ = sender;
         this.pointer_ = 0;
         this.providers_.clear();
         for (Parameter parameter : this.method_.getParameters()) {
@@ -53,7 +67,15 @@ public class CommandEndpoint {
         if (this.providers_.isEmpty()) { this.readyToRun_ = true; return; }
         this.readyToRun_ = this.providers_.stream().allMatch(CommandProvider::readyToProvide);
     }
-
+    boolean testPermission(CommandSender sender) {
+        if (this.permission_ == null) { return true; }
+        if (this.permission_.equals("")) { return true; }
+        return sender.hasPermission(this.permission_);
+    }
+    boolean testPermission() {
+        if (this.sender_ == null) { return false; }
+        return this.testPermission(this.sender_);
+    }
     boolean supplyArgument(Argument arg) throws CommandException {
         CommandProvider<?> provider;
         boolean supplied = false;
@@ -79,8 +101,8 @@ public class CommandEndpoint {
         }
         return false;
     }
-
     List<String> suggest() {
+        if (!this.testPermission()) { return Collections.emptyList(); }
         CommandProvider<?> provider = this.providers_.stream()
                 .filter(p -> !p.readyToProvide())
                 .findFirst()
@@ -88,8 +110,11 @@ public class CommandEndpoint {
 
         return (provider == null) ? Collections.emptyList() : provider.suggest();
     }
-
     Object run() throws CommandException {
+        if (!this.testPermission()) {
+            throw new CommandNotAllowedException(this.permission_,"You're not allowed to run this command.");
+        }
+
         LinkedList<Object> vals = new LinkedList<>();
         for (CommandProvider<?> provider : this.providers_) {
             if (provider.readyToProvide()) {
