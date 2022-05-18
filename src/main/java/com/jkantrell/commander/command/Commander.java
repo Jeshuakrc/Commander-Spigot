@@ -13,7 +13,6 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import javax.annotation.Nonnull;
 import javax.management.openmbean.KeyAlreadyExistsException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
@@ -21,6 +20,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.*;
+import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -36,6 +36,16 @@ public class Commander {
     private final HashMap<String, CommanderCommand> registrationMap_ = new HashMap<>();
     private final Logger logger_;
     private Level logLevel_ = Level.FINEST;
+    private static final Map<Class<?>,Class<?>> primitiveWrappers_ = Map.ofEntries(
+            Map.entry(int.class,Integer.class),
+            Map.entry(long.class,Long.class),
+            Map.entry(byte.class,Byte.class),
+            Map.entry(short.class,Short.class),
+            Map.entry(double.class,Double.class),
+            Map.entry(float.class,Float.class),
+            Map.entry(boolean.class,Boolean.class),
+            Map.entry(char.class,Character.class)
+    );
 
     //CONSTRUCTORS
     public Commander(JavaPlugin mainInstance) {
@@ -122,7 +132,12 @@ public class Commander {
         this.registerProvider(null,target,provider);
     }
     public <E> void registerProvider(Class<? extends Annotation> annotation,Class<E> target, CommandProvider<E> provider) {
-        if (this.providers_.keySet().stream().anyMatch(k -> k.annotation.equals(annotation) && k.toProvide.equals(target))) {
+        if (this.providers_.keySet().stream().anyMatch(k -> {
+                if (annotation == null) {
+                    return k.annotation == null && k.toProvide.equals(target);
+                }
+                return annotation.equals(k.annotation) && k.toProvide.equals(target);
+        })) {
             throw new KeyAlreadyExistsException(
                 "There's already a provider registered under such key: [" + annotation.getSimpleName() + " + " + target.getSimpleName() + "]."
             );
@@ -136,13 +151,27 @@ public class Commander {
         }
     }
     public <E> CommandProvider<E> getProvider(Class<? extends Annotation> annotation, Class<E> providerType) {
+        Map.Entry<ProviderKey,Constructor<? extends CommandProvider>> entry;
+        boolean repeat = true;
+        Class<E> type = (Class<E>) Commander.primitiveWrappers_.getOrDefault(providerType, providerType);
+        Predicate<ProviderKey> filter = k -> k.toProvide.equals(type);
 
-        Map.Entry<ProviderKey,Constructor<? extends CommandProvider>> entry = this.providers_.entrySet().stream()
-                .filter(e -> {
-                    ProviderKey key = e.getKey();
-                    return key.annotation.equals(annotation) && key.toProvide.equals(providerType);
-                })
-                .findFirst().orElse(null);
+        while (true) {
+            Predicate<ProviderKey> f = filter;
+            entry = this.providers_.entrySet().stream()
+                    .filter(e -> {
+                        ProviderKey key = e.getKey();
+                        if (annotation == null) {
+                            return key.annotation == null && f.test(key);
+                        }
+                        return annotation.equals(key.annotation) && f.test(key);
+                    })
+                    .findFirst().orElse(null);
+            if (entry == null && repeat) {
+                filter = k -> k.toProvide.isAssignableFrom(type);
+                repeat = false;
+            } else { break; }
+        }
 
         if (entry == null) {return null;}
 
@@ -155,6 +184,10 @@ public class Commander {
 
     //PRIVATE METHODS
     private void registerBuiltInProviders_() {
+        this.registerProvider(Number.class, new NumberProvider());
+        this.registerProvider(Boolean.class, new BooleanProvider());
+        this.registerProvider(Character.class, new CharacterProvider());
+        this.registerProvider(Enum.class, new EnumProvider());
         this.registerProvider(Player.class, new PlayerProvider());
         this.registerProvider(Location.class, new LocationProvider());
         this.registerProvider(World.class, new WorldProvider());

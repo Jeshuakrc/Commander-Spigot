@@ -72,7 +72,7 @@ public class CommandEndpoint {
             }
             if (provider == null) {
                 this.commander_.getLogger().severe(
-                        "Una ble to execute command '" + this.parent_.getFullPath() + "'. No command provider found for type " + parameter.getType().getSimpleName() + "."
+                "Unable to execute command '" + this.parent_.getFullPath() + "'. No command provider found for type " + parameter.getType().getSimpleName() + "."
                 );
                 throw new CommandUnrunnableException("An error occurred running this command.");
             }
