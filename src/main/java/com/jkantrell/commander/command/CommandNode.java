@@ -139,7 +139,7 @@ class CommandNode {
     }
 
     boolean testPermission(CommandSender sender) {
-        if (this.perms_.stream().map(s -> (s == null) ? "" : s).anyMatch(sender::hasPermission)) { return true; }
+        if (this.perms_.stream().anyMatch(p -> p == null || sender.hasPermission(p))) { return true; }
         return this.children_.values().stream().anyMatch(c -> c.testPermission(sender));
     }
 

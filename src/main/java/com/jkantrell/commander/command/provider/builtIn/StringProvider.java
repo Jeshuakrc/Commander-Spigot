@@ -16,7 +16,7 @@ public class StringProvider extends CommandProvider<String> {
     }
 
     @Override
-    protected boolean handleArgument(Argument argument) {
+    protected boolean handleArgument(Argument argument) throws CommandException {
         this.string_ = argument.getString();
         return true;
     }
