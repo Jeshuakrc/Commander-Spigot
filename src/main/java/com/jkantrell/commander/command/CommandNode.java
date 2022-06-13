@@ -3,7 +3,7 @@ package com.jkantrell.commander.command;
 import com.jkantrell.commander.exception.CommandException;
 import com.jkantrell.commander.exception.CommandUnrunnableException;
 import com.jkantrell.commander.exception.NoMoreArgumentsException;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.bukkit.command.CommandSender;
 import java.lang.reflect.Method;
 import java.util.*;

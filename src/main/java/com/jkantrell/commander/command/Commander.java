@@ -4,7 +4,7 @@ import com.jkantrell.commander.command.annotations.Command;
 import com.jkantrell.commander.command.annotations.Requires;
 import com.jkantrell.commander.command.provider.CommandProvider;
 import com.jkantrell.commander.command.provider.builtIn.*;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
